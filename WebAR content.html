@@ -1,0 +1,2281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAR Gated Access</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #fdbb2d;
+        }
+        
+        .qr-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .qr-code {
+            width: 200px;
+            height: 200px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status.locked {
+            background: rgba(178, 31, 31, 0.3);
+            border: 1px solid #b21f1f;
+        }
+        
+        .status.unlocked {
+            background: rgba(0, 128, 0, 0.3);
+            border: 1px solid #00ff00;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 12px 25px;
+            background: #fdbb2d;
+            color: #1a2a6c;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+            text-decoration: none;
+        }
+        
+        .button:hover {
+            background: #ffcc44;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+        }
+        
+        .button.secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        
+        .ar-container {
+            width: 100%;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            margin: 20px 0;
+        }
+        
+        .ar-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #12c2e9, #c471ed, #f64f59);
+            border-radius: 50px;
+            margin: 10px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .flex-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        
+        .flex-item {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .info-text {
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .step-number {
+            background: #fdbb2d;
+            color: #1a2a6c;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .step-text {
+            flex: 1;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 768px) {
+            .flex-container {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+        
+        .timer-message {
+            background: rgba(253, 187, 45, 0.2);
+            border: 1px solid #fdbb2d;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .qr-code {
+            transition: opacity 0.5s ease;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #countdown {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: #fdbb2d;
+            font-weight: bold;
+        }
+
+        /* Analytics Modal Styles */
+        .analytics-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .analytics-content {
+            background: white;
+            color: black;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 800px;
+            margin: 50px auto;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .stat-card {
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+            margin: 10px;
+        }
+        
+        .admin-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            background: #1a2a6c !important;
+            color: white !important;
+        }
+
+        .access-list {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .access-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>WebAR Gated Access</h1>
+            <p class="subtitle">Unlock Augmented Reality experiences with your blockchain pass</p>
+        </header>
+        
+        <div class="flex-container">
+            <div class="flex-item">
+                <div class="card">
+                    <h2 class="card-title">How It Works</h2>
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-text">Scan the QR code to open the WebAR page</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-text">Connect your wallet using Web3Modal</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-text">If you don't have a pass, mint one (free on testnet)</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-text">Access the AR experience and claim your badge</div>
+                    </div>
+                    <div class="qr-container">
+                        <div id="qrTimerMessage" class="timer-message" style="display: none;">
+                            <p>🕒 QR Code will reappear in: <span id="countdown">01:00:00</span></p>
+                        </div>
+    
+                         <div id="qrCodeElement" class="qr-code">
+                         <img src="C:\Users\sobiy\OneDrive\Desktop\project\adobe-express-qr-code.png" 
+                            alt="WebAR QR Code" id="qrImage">
+                           <p>Scan to open WebAR page</p>
+                         </div>
+                   
+    
+                         <button class="button secondary" id="manualRefresh" style="display: none;">
+                          Show QR Code Now
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 class="card-title">Access Control</h2>
+                    <div class="status locked" id="accessStatus">
+                        AR Content Locked - Connect Wallet
+                    </div>
+                    <div style="text-align: center;">
+                        <button class="button" id="connectWallet">Connect Wallet</button>
+                        <button class="button secondary" id="mintPass">Mint Pass</button>
+                        <button class="button secondary" id="claimBadge">Claim Badge</button>
+                    </div>
+
+                    <!-- Access Control Section -->
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);">
+                        <h3 style="color: #fdbb2d; margin-bottom: 10px;">🔐 Access List</h3>
+                        <div class="access-list" id="accessList">
+                            <p>No authorized users yet</p>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button class="button secondary" onclick="addCurrentUserToAccessList()">
+                                ➕ Add Current User
+                            </button>
+                            <button class="button secondary" onclick="clearAccessList()">
+                                🗑️ Clear List
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex-item">
+                <div class="card">
+                    <h2 class="card-title">AR Experience</h2>
+                    <div class="ar-container">
+                        <div class="ar-placeholder" id="arPlaceholder">
+                            AR content will appear here after access is granted
+                        </div>
+                    </div>
+                    <p class="info-text">Point your camera at the AR marker to see the special content</p>
+                </div>
+                
+                <div class="card">
+                    <h2 class="card-title">Your Collection</h2>
+                    <div id="collection">
+                        <p>Connect your wallet to view your passes and badges</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">Live Analytics</h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center;">
+                        <div style="background: rgba(26, 42, 108, 0.3); padding: 15px; border-radius: 10px;">
+                            <h3>Passes Minted</h3>
+                            <p id="livePasses" style="font-size: 2rem; font-weight: bold;">0</p>
+                        </div>
+                        <div style="background: rgba(253, 187, 45, 0.3); padding: 15px; border-radius: 10px;">
+                            <h3>AR Accesses</h3>
+                            <p id="liveAccesses" style="font-size: 2rem; font-weight: bold;">0</p>
+                        </div>
+                        <div style="background: rgba(18, 194, 233, 0.3); padding: 15px; border-radius: 10px;">
+                            <h3>Unique Users</h3>
+                            <p id="liveUsers" style="font-size: 2rem; font-weight: bold;">0</p>
+                        </div>
+                        <div style="background: rgba(196, 113, 237, 0.3); padding: 15px; border-radius: 10px;">
+                            <h3>Badges Claimed</h3>
+                            <p id="liveBadges" style="font-size: 2rem; font-weight: bold;">0</p>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button class="button secondary" onclick="showAnalytics()">
+                            📊 View Detailed Analytics
+                        </button>
+                    </div>
+                   <!-- Admin Control Panel -->
+<div class="card" id="adminPanel" style="display: none;">
+    <h2 class="card-title">👑 Administrator Panel</h2>
+    
+    <div style="background: rgba(253, 187, 45, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+        <h3 style="color: #fdbb2d; margin-bottom: 10px;">Access Control Management</h3>
+        
+        <!-- Add User Section -->
+        <div style="margin-bottom: 15px;">
+            <h4>Add User to Access List</h4>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <input type="text" id="userAddressInput" placeholder="Enter wallet address (0x...)" 
+                       style="flex: 1; padding: 10px; border: none; border-radius: 5px; background: rgba(255,255,255,0.1); color: white;">
+                <button class="button" onclick="addUserByAddress()">➕ Add User</button>
+            </div>
+        </div>
+
+        <!-- Current Connected User -->
+        <div style="margin-bottom: 15px;">
+            <h4>Quick Actions</h4>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="button secondary" onclick="addCurrentUserToAccessList()">
+                    ➕ Add Connected User
+                </button>
+                <button class="button secondary" onclick="addDemoUsers()">
+                    👥 Add Demo Users
+                </button>
+                <button class="button secondary" onclick="clearAccessList()" style="background: #b21f1f;">
+                    🗑️ Clear All Access
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Access List Management -->
+    <div>
+        <h4>Authorized Users List</h4>
+        <div class="access-list" id="adminAccessList" style="max-height: 200px;">
+            <p>No authorized users yet</p>
+        </div>
+        
+        <div style="margin-top: 10px; display: flex; justify-content: space-between;">
+            <div>
+                <small>Total Authorized: <span id="authorizedCount">0</span> users</small>
+            </div>
+            <div>
+                <button class="button secondary" onclick="exportAccessList()">
+                    📥 Export List
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Settings -->
+    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+        <h4>Admin Settings</h4>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="button secondary" onclick="togglePublicAccess()" id="publicAccessBtn">
+                🔒 Enable Public Access
+            </button>
+            <button class="button secondary" onclick="showAdminAnalytics()">
+                📊 Admin Analytics
+            </button>
+            <button class="button secondary" onclick="resetSystem()" style="background: #b21f1f;">
+                🔄 Reset System
+            </button>
+        </div>
+    </div>
+</div>
+
+    <!-- Admin Settings -->
+    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+        <h4>Admin Settings</h4>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="button secondary" onclick="togglePublicAccess()" id="publicAccessBtn">
+                🔒 Enable Public Access
+            </button>
+            <button class="button secondary" onclick="showAdminAnalytics()">
+                📊 Admin Analytics
+            </button>
+            <button class="button secondary" onclick="resetSystem()" style="background: #b21f1f;">
+                🔄 Reset System
+            </button>
+        </div>
+    </div>
+</div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>WebAR Gated Access Demo | Blockchain-powered Augmented Reality</p>
+            <p>Uses Ethereum testnet for free transactions</p>
+        </footer>
+    </div>
+
+    <!-- Analytics Modal -->
+    <div class="analytics-modal" id="analyticsModal">
+        <div class="analytics-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #1a2a6c;">📊 Web3 Analytics Dashboard</h2>
+                <button onclick="closeAnalytics()" style="background: #b21f1f; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Close</button>
+            </div>
+            
+            <div id="analyticsContent">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #1a2a6c, #2a3a8c);">
+                        <h3>👥 Total Users</h3>
+                        <p id="totalUsers" style="font-size: 2rem; font-weight: bold; margin: 10px 0;">0</p>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #b21f1f, #c22f2f);">
+                        <h3>🎫 Passes Minted</h3>
+                        <p id="passesMinted" style="font-size: 2rem; font-weight: bold; margin: 10px 0;">0</p>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #fdbb2d, #ffcc44); color: black;">
+                        <h3>🔓 AR Accesses</h3>
+                        <p id="arAccesses" style="font-size: 2rem; font-weight: bold; margin: 10px 0;">0</p>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #12c2e9, #c471ed);">
+                        <h3>🏆 Badges Claimed</h3>
+                        <p id="badgesClaimed" style="font-size: 2rem; font-weight: bold; margin: 10px 0;">0</p>
+                    </div>
+                </div>
+                
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #1a2a6c;">📈 Activity Timeline</h3>
+                    <div id="timelineChart" style="height: 200px; background: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        <p style="text-align: center; color: #666;">Activity timeline will appear here</p>
+                    </div>
+                </div>
+
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #1a2a6c;">👤 User Activity</h3>
+                    <div id="userActivity" style="max-height: 200px; overflow-y: auto;">
+                        <p style="text-align: center; color: #666;">User activity will appear here</p>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+                    <button onclick="refreshAnalytics()" style="background: #1a2a6c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
+                    <button onclick="exportAnalytics()" style="background: #fdbb2d; color: black; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">📥 Export Data</button>
+                    <button onclick="clearAnalytics()" style="background: #b21f1f; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">🗑️ Clear Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Button -->
+    <button class="button admin-btn" onclick="showAnalytics()">📊 Admin Analytics</button>
+
+    <script>
+        // Enhanced Analytics and Access Control System
+        class AnalyticsService {
+            constructor() {
+                this.analyticsKey = 'web3_analytics';
+                this.accessListKey = 'authorized_users';
+                this.currentUser = null;
+            }
+
+            // Analytics Methods
+            trackEvent(eventType, data = {}) {
+                const eventData = {
+                    eventType,
+                    timestamp: new Date().toISOString(),
+                    userAddress: this.currentUser,
+                    ...data
+                };
+
+                this.storeEvent(eventData);
+                this.updateLiveStats();
+            }
+
+            storeEvent(eventData) {
+                let events = JSON.parse(localStorage.getItem(this.analyticsKey) || '[]');
+                events.push(eventData);
+                
+                // Keep only last 500 events
+                if (events.length > 500) {
+                    events = events.slice(-500);
+                }
+                
+                localStorage.setItem(this.analyticsKey, JSON.stringify(events));
+            }
+
+            getAnalytics() {
+                const events = JSON.parse(localStorage.getItem(this.analyticsKey) || '[]');
+                return this.analyzeEvents(events);
+            }
+
+            analyzeEvents(events) {
+                const analytics = {
+                    totalEvents: events.length,
+                    walletConnections: events.filter(e => e.eventType === 'wallet_connected').length,
+                    passesMinted: events.filter(e => e.eventType === 'pass_minted').length,
+                    arAccesses: events.filter(e => e.eventType === 'ar_accessed').length,
+                    badgesClaimed: events.filter(e => e.eventType === 'badge_claimed').length,
+                    uniqueUsers: [...new Set(events.map(e => e.userAddress))].length,
+                    timeline: this.getTimelineData(events),
+                    userActivity: this.getUserActivity(events)
+                };
+                
+                return analytics;
+            }
+
+            getTimelineData(events) {
+                return events.reduce((acc, event) => {
+                    const date = new Date(event.timestamp).toLocaleDateString();
+                    if (!acc[date]) acc[date] = 0;
+                    acc[date]++;
+                    return acc;
+                }, {});
+            }
+
+            getUserActivity(events) {
+                const userMap = {};
+                events.forEach(event => {
+                    if (!userMap[event.userAddress]) {
+                        userMap[event.userAddress] = {
+                            address: event.userAddress,
+                            connections: 0,
+                            passes: 0,
+                            badges: 0,
+                            arAccesses: 0,
+                            lastActivity: event.timestamp
+                        };
+                    }
+                    
+                    userMap[event.userAddress].lastActivity = event.timestamp;
+                    
+                    switch(event.eventType) {
+                        case 'wallet_connected':
+                            userMap[event.userAddress].connections++;
+                            break;
+                        case 'pass_minted':
+                            userMap[event.userAddress].passes++;
+                            break;
+                        case 'badge_claimed':
+                            userMap[event.userAddress].badges++;
+                            break;
+                        case 'ar_accessed':
+                            userMap[event.userAddress].arAccesses++;
+                            break;
+                    }
+                });
+                
+                return Object.values(userMap);
+            }
+
+            updateLiveStats() {
+                const analytics = this.getAnalytics();
+                document.getElementById('livePasses').textContent = analytics.passesMinted;
+                document.getElementById('liveAccesses').textContent = analytics.arAccesses;
+                document.getElementById('liveUsers').textContent = analytics.uniqueUsers;
+                document.getElementById('liveBadges').textContent = analytics.badgesClaimed;
+            }
+
+            exportAnalytics() {
+                const analytics = this.getAnalytics();
+                const dataStr = JSON.stringify(analytics, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `web3-analytics-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+            }
+
+            clearAnalytics() {
+                localStorage.removeItem(this.analyticsKey);
+                this.updateLiveStats();
+            }
+
+            // Access Control Methods
+            isUserAuthorized(userAddress) {
+                const authorizedUsers = JSON.parse(localStorage.getItem(this.accessListKey) || '[]');
+                return authorizedUsers.includes(userAddress);
+            }
+
+            addUserToAccessList(userAddress) {
+                const authorizedUsers = JSON.parse(localStorage.getItem(this.accessListKey) || '[]');
+                if (!authorizedUsers.includes(userAddress)) {
+                    authorizedUsers.push(userAddress);
+                    localStorage.setItem(this.accessListKey, JSON.stringify(authorizedUsers));
+                    this.updateAccessListDisplay();
+                    return true;
+                }
+                return false;
+            }
+
+            removeUserFromAccessList(userAddress) {
+                const authorizedUsers = JSON.parse(localStorage.getItem(this.accessListKey) || '[]');
+                const updatedUsers = authorizedUsers.filter(user => user !== userAddress);
+                localStorage.setItem(this.accessListKey, JSON.stringify(updatedUsers));
+                this.updateAccessListDisplay();
+            }
+
+            clearAccessList() {
+                localStorage.removeItem(this.accessListKey);
+                this.updateAccessListDisplay();
+            }
+
+            getAccessList() {
+                return JSON.parse(localStorage.getItem(this.accessListKey) || '[]');
+            }
+
+            updateAccessListDisplay() {
+                const accessList = this.getAccessList();
+                const accessListElement = document.getElementById('accessList');
+                
+                if (accessList.length === 0) {
+                    accessListElement.innerHTML = '<p>No authorized users yet</p>';
+                    return;
+                }
+
+                let html = '';
+                accessList.forEach(user => {
+                    const shortAddress = user.substring(0, 6) + '...' + user.substring(38);
+                    html += `
+                        <div class="access-item">
+                            <span>${shortAddress}</span>
+                            <button onclick="removeUser('${user}')" style="background: #b21f1f; color: white; border: none; padding: 2px 8px; border-radius: 3px; font-size: 0.8rem;">Remove</button>
+                        </div>
+                    `;
+                });
+                accessListElement.innerHTML = html;
+            }
+
+            setCurrentUser(userAddress) {
+                this.currentUser = userAddress;
+            }
+        }
+
+        // Initialize Analytics Service
+        const analyticsService = new AnalyticsService();
+
+        // Access Control Functions
+        function addCurrentUserToAccessList() {
+            if (!analyticsService.currentUser) {
+                alert('Please connect your wallet first');
+                return;
+            }
+            
+            if (analyticsService.addUserToAccessList(analyticsService.currentUser)) {
+                alert('User added to access list!');
+            } else {
+                alert('User is already in the access list');
+            }
+        }
+
+        function removeUser(userAddress) {
+            analyticsService.removeUserFromAccessList(userAddress);
+        }
+
+        function clearAccessList() {
+            if (confirm('Are you sure you want to clear the access list?')) {
+                analyticsService.clearAccessList();
+                alert('Access list cleared!');
+            }
+        }
+
+        // Analytics Modal Functions
+        function showAnalytics() {
+            document.getElementById('analyticsModal').style.display = 'block';
+            refreshAnalytics();
+        }
+
+        function closeAnalytics() {
+            document.getElementById('analyticsModal').style.display = 'none';
+        }
+
+        function refreshAnalytics() {
+            const analytics = analyticsService.getAnalytics();
+            
+            // Update stats
+            document.getElementById('totalUsers').textContent = analytics.uniqueUsers;
+            document.getElementById('passesMinted').textContent = analytics.passesMinted;
+            document.getElementById('arAccesses').textContent = analytics.arAccesses;
+            document.getElementById('badgesClaimed').textContent = analytics.badgesClaimed;
+            
+            // Update timeline
+            updateTimeline(analytics.timeline);
+            
+            // Update user activity
+            updateUserActivity(analytics.userActivity);
+        }
+
+        function updateTimeline(timeline) {
+            const timelineElement = document.getElementById('timelineChart');
+            
+            if (Object.keys(timeline).length === 0) {
+                timelineElement.innerHTML = '<p style="text-align: center; color: #666;">No activity data yet</p>';
+                return;
+            }
+            
+            let html = '<div style="display: flex; align-items: end; height: 150px; gap: 5px; justify-content: center;">';
+            
+            const maxEvents = Math.max(...Object.values(timeline), 1);
+            
+            Object.entries(timeline).forEach(([date, count]) => {
+                const height = (count / maxEvents) * 100;
+                html += `
+                    <div style="display: flex; flex-direction: column; align-items: center; flex: 1; max-width: 80px;">
+                        <div style="background: #1a2a6c; width: 100%; height: ${height}px; border-radius: 3px;"></div>
+                        <small style="margin-top: 5px; font-size: 10px;">${date}</small>
+                        <small style="font-size: 10px;">${count}</small>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            timelineElement.innerHTML = html;
+        }
+
+        function updateUserActivity(userActivity) {
+            const userActivityElement = document.getElementById('userActivity');
+            
+            if (userActivity.length === 0) {
+                userActivityElement.innerHTML = '<p style="text-align: center; color: #666;">No user activity yet</p>';
+                return;
+            }
+
+            let html = '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px;">';
+            html += '<div>User</div><div>Connects</div><div>Passes</div><div>Badges</div><div>AR</div>';
+            html += '</div>';
+
+            userActivity.forEach(user => {
+                const shortAddress = user.address.substring(0, 6) + '...' + user.address.substring(38);
+                html += `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid #eee;">
+                        <div title="${user.address}">${shortAddress}</div>
+                        <div>${user.connections}</div>
+                        <div>${user.passes}</div>
+                        <div>${user.badges}</div>
+                        <div>${user.arAccesses}</div>
+                    </div>
+                `;
+            });
+
+            userActivityElement.innerHTML = html;
+        }
+
+        function exportAnalytics() {
+            analyticsService.exportAnalytics();
+        }
+
+        function clearAnalytics() {
+            if (confirm('Are you sure you want to clear all analytics data?')) {
+                analyticsService.clearAnalytics();
+                refreshAnalytics();
+                alert('Analytics data cleared!');
+            }
+        }
+        
+        // Initialize access list display
+        analyticsService.updateAccessListDisplay();
+        // Enhanced Admin Controls
+// Enhanced Admin Controls - FIXED VERSION
+class AdminService {
+    constructor() {
+        this.publicAccessKey = 'public_access_enabled';
+        this.accessListKey = 'authorized_users';
+        this.adminWallets = [
+            "0x35ae321CaEa5977d96344C877dEf5d003C7A6CF5".toLowerCase()
+        ];
+    }
+
+    isAdmin(walletAddress) {
+        if (!walletAddress) {
+            console.log("❌ No wallet address provided");
+            return false;
+        }
+        
+        const normalizedAddress = walletAddress.toLowerCase();
+        const isAdmin = this.adminWallets.includes(normalizedAddress);
+        
+        console.log("🔍 Admin Check:", {
+            wallet: normalizedAddress,
+            adminWallets: this.adminWallets,
+            isAdmin: isAdmin
+        });
+        
+        return isAdmin;
+    }
+
+    showAdminPanel() {
+        const adminPanel = document.getElementById('adminPanel');
+        if (adminPanel) {
+            adminPanel.style.display = 'block';
+            console.log("✅ Admin panel shown");
+        }
+    }
+
+    hideAdminPanel() {
+        const adminPanel = document.getElementById('adminPanel');
+        if (adminPanel) {
+            adminPanel.style.display = 'none';
+        }
+    }
+
+    // Public Access Control
+    enablePublicAccess() {
+        localStorage.setItem(this.publicAccessKey, 'true');
+        this.updatePublicAccessButton();
+        analyticsService.trackEvent('admin_action', {
+            action: 'enable_public_access',
+            admin: analyticsService.currentUser
+        });
+        alert('✅ Public access enabled - Anyone can now use the system!');
+    }
+
+    disablePublicAccess() {
+        localStorage.setItem(this.publicAccessKey, 'false');
+        this.updatePublicAccessButton();
+        analyticsService.trackEvent('admin_action', {
+            action: 'disable_public_access',
+            admin: analyticsService.currentUser
+        });
+        alert('🔒 Public access disabled - Only authorized users can access!');
+    }
+
+    isPublicAccessEnabled() {
+        return localStorage.getItem(this.publicAccessKey) === 'true';
+    }
+
+    updatePublicAccessButton() {
+        const button = document.getElementById('publicAccessBtn');
+        if (button) {
+            if (this.isPublicAccessEnabled()) {
+                button.innerHTML = '🔓 Disable Public Access';
+                button.style.background = '#b21f1f';
+            } else {
+                button.innerHTML = '🔒 Enable Public Access';
+                button.style.background = '';
+            }
+        }
+    }
+
+    // User Management
+    addUserToAccessList(userAddress) {
+        if (!userAddress || !userAddress.startsWith('0x')) {
+            alert('❌ Please enter a valid wallet address starting with 0x');
+            return false;
+        }
+
+        const authorizedUsers = this.getAccessList();
+        const normalizedAddress = userAddress.toLowerCase();
+        
+        if (!authorizedUsers.includes(normalizedAddress)) {
+            authorizedUsers.push(normalizedAddress);
+            localStorage.setItem(this.accessListKey, JSON.stringify(authorizedUsers));
+            
+            analyticsService.trackEvent('admin_action', {
+                action: 'add_user',
+                userAdded: normalizedAddress,
+                admin: analyticsService.currentUser
+            });
+            
+            this.updateAccessListDisplay();
+            return true;
+        }
+        return false;
+    }
+
+    removeUserFromAccessList(userAddress) {
+        const authorizedUsers = this.getAccessList();
+        const updatedUsers = authorizedUsers.filter(user => user !== userAddress);
+        localStorage.setItem(this.accessListKey, JSON.stringify(updatedUsers));
+        
+        analyticsService.trackEvent('admin_action', {
+            action: 'remove_user',
+            userRemoved: userAddress,
+            admin: analyticsService.currentUser
+        });
+        
+        this.updateAccessListDisplay();
+    }
+
+    clearAccessList() {
+        if (confirm('⚠️ Are you sure you want to remove ALL authorized users?')) {
+            localStorage.removeItem(this.accessListKey);
+            
+            analyticsService.trackEvent('admin_action', {
+                action: 'clear_access_list',
+                admin: analyticsService.currentUser
+            });
+            
+            this.updateAccessListDisplay();
+            alert('✅ Access list cleared!');
+        }
+    }
+
+    getAccessList() {
+        return JSON.parse(localStorage.getItem(this.accessListKey) || '[]');
+    }
+
+    updateAccessListDisplay() {
+        const accessList = this.getAccessList();
+        const userAccessListElement = document.getElementById('userAccessList');
+        const adminAccessListElement = document.getElementById('adminAccessList');
+        const authorizedCountElement = document.getElementById('authorizedCount');
+        
+        if (authorizedCountElement) {
+            authorizedCountElement.textContent = accessList.length;
+        }
+
+        if (accessList.length === 0) {
+            const emptyHtml = '<p>No authorized users yet</p>';
+            if (userAccessListElement) userAccessListElement.innerHTML = emptyHtml;
+            if (adminAccessListElement) adminAccessListElement.innerHTML = emptyHtml; 
+            return;
+        }
+
+        let html = '';
+        accessList.forEach(user => {
+            const shortAddress = user.substring(0, 6) + '...' + user.substring(38);
+            html += `
+                <div class="access-item">
+                    <span title="${user}">${shortAddress}</span>
+                    <div>
+                        <button onclick="removeUser('${user}')" 
+                                style="background: #b21f1f; color: white; border: none; padding: 2px 8px; border-radius: 3px; font-size: 0.8rem; margin-left: 5px;">
+                            Remove
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (userAccessListElement) userAccessListElement.innerHTML = html;
+        if (adminAccessListElement) adminAccessListElement.innerHTML = html;
+    }
+
+    // Check if user is authorized (with public access option)
+    isUserAuthorized(userAddress) {
+        // If public access is enabled, anyone can access
+        if (this.isPublicAccessEnabled()) {
+            console.log("✅ Public access enabled - user authorized");
+            return true;
+        }
+        
+        // If user is admin, always authorized
+        if (this.isAdmin(userAddress)) {
+            console.log("✅ Admin user - always authorized");
+            return true;
+        }
+        
+        // Check if user is in access list
+        const authorizedUsers = this.getAccessList();
+        const normalizedAddress = userAddress.toLowerCase();
+        const isAuthorized = authorizedUsers.includes(normalizedAddress);
+        
+        console.log("🔍 Authorization Check:", {
+            user: normalizedAddress,
+            inAccessList: isAuthorized,
+            publicAccess: this.isPublicAccessEnabled(),
+            isAdmin: this.isAdmin(userAddress)
+        });
+        
+        return isAuthorized;
+    }
+
+    exportAccessList() {
+        const accessList = this.getAccessList();
+        const data = {
+            exportedAt: new Date().toISOString(),
+            totalUsers: accessList.length,
+            authorizedUsers: accessList
+        };
+        
+        const dataStr = JSON.stringify(data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `access-list-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        
+        URL.revokeObjectURL(url);
+        
+        analyticsService.trackEvent('admin_action', {
+            action: 'export_access_list',
+            admin: analyticsService.currentUser
+        });
+    }
+
+    addDemoUsers() {
+        const demoUsers = [
+            '0x05130FAC6F9AA13fFeC3789bd8ff2E065539F9C2',
+            '0x9fC8c0A838a95c2A1A07ac417336b852b6A49e72',
+        ];
+
+        let addedCount = 0;
+        demoUsers.forEach(user => {
+            if (this.addUserToAccessList(user)) {
+                addedCount++;
+            }
+        });
+
+        alert(`✅ Added ${addedCount} demo users to access list!`);
+    }
+
+    resetSystem() {
+        if (confirm('⚠️ ARE YOU SURE? This will reset ALL data including analytics and access lists!')) {
+            localStorage.clear();
+            alert('✅ System completely reset!');
+            location.reload();
+        }
+    }
+}
+
+// Initialize Admin Service
+// Initialize Admin Service
+const adminService = new AdminService();
+
+// 🚨 EMERGENCY FIX - Override authorization for testing
+console.log("🔄 Applying emergency authorization fix...");
+
+// Override the isUserAuthorized method to allow admins and fix access
+const originalIsUserAuthorized = adminService.isUserAuthorized.bind(adminService);
+adminService.isUserAuthorized = function(userAddress) {
+    // Always allow admins
+    if (this.isAdmin(userAddress)) {
+        console.log("✅ ADMIN USER - Auto-approved");
+        return true;
+    }
+    
+    // Allow if public access is enabled
+    if (this.isPublicAccessEnabled()) {
+        console.log("✅ PUBLIC ACCESS - User approved");
+        return true;
+    }
+    
+    // Check access list
+    const result = originalIsUserAuthorized(userAddress);
+    console.log("🔍 Access check result:", result);
+    return result;
+};
+
+// Also override the analytics service authorization
+analyticsService.isUserAuthorized = function(userAddress) {
+    return adminService.isUserAuthorized(userAddress);
+};
+
+        // Your existing code with analytics integration
+        document.addEventListener('DOMContentLoaded', function() {
+    const accessStatus = document.getElementById('accessStatus');
+    const connectWalletBtn = document.getElementById('connectWallet');
+    const mintPassBtn = document.getElementById('mintPass');
+    const claimBadgeBtn = document.getElementById('claimBadge');
+    const collectionDiv = document.getElementById('collection');
+    
+    let walletConnected = false;
+    let hasPass = false;
+    let hasBadge = false;
+    let currentUserAddress = null;
+
+    // ✅ ADD YOUR CONTRACT DETAILS HERE
+    const CONTRACT_ADDRESS = "0x35ae321CaEa5977d96344C877dEf5d003C7A6CF5"; // Your contract address
+    
+    // ✅ PASTE YOUR FULL ABI HERE (the entire array from Remix)
+    const CONTRACT_ABI = [
+    {
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_baseURI",
+				"type": "string"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "approved",
+				"type": "bool"
+			}
+		],
+		"name": "ApprovalForAll",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "recipient",
+				"type": "address"
+			}
+		],
+		"name": "BadgeClaimed",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address[]",
+				"name": "recipients",
+				"type": "address[]"
+			}
+		],
+		"name": "batchMintPasses",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "claimBadge",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "mintPass",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "previousOwner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "recipient",
+				"type": "address"
+			}
+		],
+		"name": "PassMinted",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "ids",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "amounts",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "bytes",
+				"name": "data",
+				"type": "bytes"
+			}
+		],
+		"name": "safeBatchTransferFrom",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes",
+				"name": "data",
+				"type": "bytes"
+			}
+		],
+		"name": "safeTransferFrom",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "approved",
+				"type": "bool"
+			}
+		],
+		"name": "setApprovalForAll",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_newBaseURI",
+				"type": "string"
+			}
+		],
+		"name": "setBaseURI",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256[]",
+				"name": "ids",
+				"type": "uint256[]"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256[]",
+				"name": "values",
+				"type": "uint256[]"
+			}
+		],
+		"name": "TransferBatch",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			}
+		],
+		"name": "TransferSingle",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "value",
+				"type": "string"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			}
+		],
+		"name": "URI",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "BADGE_ID",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			}
+		],
+		"name": "balanceOf",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address[]",
+				"name": "accounts",
+				"type": "address[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "ids",
+				"type": "uint256[]"
+			}
+		],
+		"name": "balanceOfBatch",
+		"outputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "",
+				"type": "uint256[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "baseURI",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "hasClaimedBadge",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			}
+		],
+		"name": "isApprovedForAll",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "PASS_ID",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes4",
+				"name": "interfaceId",
+				"type": "bytes4"
+			}
+		],
+		"name": "supportsInterface",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "uri",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+    ];
+
+    // Web3 Service with Real Blockchain Integration
+    class Web3Service {
+        constructor() {
+            this.provider = null;
+            this.signer = null;
+            this.contract = null;
+            this.initialized = false;
+            this.usingRealBlockchain = false;
+            
+            // Your contract settings
+            this.contractAddress = CONTRACT_ADDRESS;
+            this.contractABI = CONTRACT_ABI;
+        }
+
+        async connectWallet() {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    // Real MetaMask connection
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    this.provider = new ethers.providers.Web3Provider(window.ethereum);
+                    this.signer = this.provider.getSigner();
+                    this.userAddress = await this.signer.getAddress();
+                    
+                    // Try to initialize real contract
+                    try {
+                        await this.initializeRealContract();
+                        this.usingRealBlockchain = true;
+                        console.log("✅ Connected to REAL blockchain");
+                    } catch (error) {
+                        console.log("⚠️ Using simulation mode");
+                        this.usingRealBlockchain = false;
+                    }
+                    
+                } else {
+                    // Fallback to simulation
+                    this.userAddress = '0x' + Math.random().toString(16).substr(2, 40);
+                    this.usingRealBlockchain = false;
+                }
+                
+                analyticsService.setCurrentUser(this.userAddress);
+                analyticsService.trackEvent('wallet_connected', {
+                    userAddress: this.userAddress,
+                    blockchainType: this.usingRealBlockchain ? 'real' : 'simulation'
+                });
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Connection failed:', error);
+                // Fallback to simulation
+                this.userAddress = '0xSimulatedUser';
+                this.usingRealBlockchain = false;
+                analyticsService.setCurrentUser(this.userAddress);
+                return true;
+            }
+        }
+
+        async initializeRealContract() {
+            try {
+                this.contract = new ethers.Contract(this.contractAddress, this.contractABI, this.signer);
+                
+                // Test if contract is accessible
+                await this.contract.PASS_ID();
+                this.initialized = true;
+                console.log("✅ Real contract initialized");
+                
+            } catch (error) {
+                console.log("❌ Real contract not accessible");
+                throw error;
+            }
+        }
+
+        async mintPass() {
+            try {
+                console.log("🔄 Minting pass...");
+                
+                if (this.usingRealBlockchain && this.contract) {
+                    // REAL BLOCKCHAIN TRANSACTION
+                    console.log("📦 Using REAL blockchain...");
+                    const tx = await this.contract.mintPass();
+                    console.log("📦 Transaction sent:", tx.hash);
+                    
+                    const receipt = await tx.wait();
+                    console.log("✅ Transaction confirmed");
+                    
+                    analyticsService.trackEvent('pass_minted', {
+                        userAddress: this.userAddress,
+                        transactionHash: tx.hash,
+                        blockchainType: 'real'
+                    });
+                    
+                    return { success: true, txHash: tx.hash, type: 'real' };
+                    
+                } else {
+                    // SIMULATION
+                    console.log("🎭 Using SIMULATION...");
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    analyticsService.trackEvent('pass_minted', {
+                        userAddress: this.userAddress,
+                        transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+                        blockchainType: 'simulation'
+                    });
+                    
+                    return { success: true, txHash: '0xSimulatedTx', type: 'simulation' };
+                }
+                
+            } catch (error) {
+                console.error('Minting failed:', error);
+                
+                // Fallback to simulation
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                analyticsService.trackEvent('pass_minted', {
+                    userAddress: this.userAddress,
+                    transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+                    blockchainType: 'simulation_fallback'
+                });
+                
+                return { success: true, txHash: '0xFallbackTx', type: 'simulation_fallback' };
+            }
+        }
+
+        async claimBadge() {
+            try {
+                console.log("🔄 Claiming badge...");
+                
+                if (this.usingRealBlockchain && this.contract) {
+                    // REAL BLOCKCHAIN TRANSACTION
+                    console.log("📦 Using REAL blockchain...");
+                    const tx = await this.contract.claimBadge();
+                    console.log("📦 Transaction sent:", tx.hash);
+                    
+                    const receipt = await tx.wait();
+                    console.log("✅ Transaction confirmed");
+                    
+                    analyticsService.trackEvent('badge_claimed', {
+                        userAddress: this.userAddress,
+                        transactionHash: tx.hash,
+                        blockchainType: 'real'
+                    });
+                    
+                    analyticsService.trackEvent('ar_accessed', {
+                        userAddress: this.userAddress,
+                        arScene: 'classroom_entry',
+                        blockchainType: 'real'
+                    });
+                    
+                    return { success: true, txHash: tx.hash, type: 'real' };
+                    
+                } else {
+                    // SIMULATION
+                    console.log("🎭 Using SIMULATION...");
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    analyticsService.trackEvent('badge_claimed', {
+                        userAddress: this.userAddress,
+                        transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+                        blockchainType: 'simulation'
+                    });
+                    
+                    analyticsService.trackEvent('ar_accessed', {
+                        userAddress: this.userAddress,
+                        arScene: 'classroom_entry',
+                        blockchainType: 'simulation'
+                    });
+                    
+                    return { success: true, txHash: '0xSimulatedTx', type: 'simulation' };
+                }
+                
+            } catch (error) {
+                console.error('Badge claim failed:', error);
+                
+                // Fallback to simulation
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                analyticsService.trackEvent('badge_claimed', {
+                    userAddress: this.userAddress,
+                    transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+                    blockchainType: 'simulation_fallback'
+                });
+                
+                return { success: true, txHash: '0xFallbackTx', type: 'simulation_fallback' };
+            }
+        }
+
+        async checkPassOwnership() {
+            try {
+                if (this.usingRealBlockchain && this.contract) {
+                    const passId = await this.contract.PASS_ID();
+                    const balance = await this.contract.balanceOf(this.userAddress, passId);
+                    return balance.gt(0);
+                }
+                return false;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        getBlockchainStatus() {
+            return {
+                usingRealBlockchain: this.usingRealBlockchain,
+                userAddress: this.userAddress,
+                contractAddress: this.contractAddress
+            };
+        }
+    }
+
+    // Initialize Web3 Service
+    const web3Service = new Web3Service();
+
+    // Update live stats on load
+    analyticsService.updateLiveStats();
+
+    // Enhanced wallet connection with real blockchain
+    // Enhanced wallet connection with real blockchain
+    // Enhanced wallet connection with real blockchain - FIXED VERSION
+    // Enhanced wallet connection with real blockchain - SIMPLIFIED VERSION
+connectWalletBtn.addEventListener('click', async function() {
+    const connected = await web3Service.connectWallet();
+    
+    if (connected) {
+        currentUserAddress = web3Service.userAddress;
+        walletConnected = true;
+        
+        console.log("💰 Wallet connected:", currentUserAddress);
+        console.log("👑 Is Admin:", adminService.isAdmin(currentUserAddress));
+        
+        // Check if user is admin and show admin panel
+        checkAndShowAdminPanel(currentUserAddress);
+        
+        // 🚨 TEMPORARY: Auto-add admin to access list
+        if (adminService.isAdmin(currentUserAddress)) {
+            console.log("👑 Auto-adding admin to access list...");
+            adminService.addUserToAccessList(currentUserAddress);
+        }
+        
+        // Check authorization
+        const isAuthorized = adminService.isUserAuthorized(currentUserAddress);
+        console.log("✅ Authorization status:", isAuthorized);
+        
+        if (isAuthorized) {
+            // Check if user already has a pass
+            const hasExistingPass = await web3Service.checkPassOwnership();
+            if (hasExistingPass) {
+                hasPass = true;
+                console.log("🎫 User already has a pass");
+            }
+            updateUI();
+        } else {
+            console.log("❌ User not authorized");
+            alert('❌ Access Denied: Your wallet is not authorized to use this system. Please contact administrator.');
+            walletConnected = false;
+            updateUI();
+        }
+    }
+});
+
+    // Enhanced minting with real blockchain
+    mintPassBtn.addEventListener('click', async function() {
+        if (!walletConnected) {
+            alert('Please connect your wallet first');
+            return;
+        }
+        
+        if (!analyticsService.isUserAuthorized(currentUserAddress)) {
+            alert('❌ Access Denied: Your wallet is not authorized');
+            return;
+        }
+
+        const status = web3Service.getBlockchainStatus();
+        const actionText = status.usingRealBlockchain ? 
+            'Minting pass... (Confirm in MetaMask)' : 
+            'Minting pass... (Simulation)';
+        
+        accessStatus.textContent = actionText;
+        mintPassBtn.disabled = true;
+        
+        const result = await web3Service.mintPass();
+        
+        if (result.success) {
+            hasPass = true;
+            updateUI();
+            
+            const successText = status.usingRealBlockchain ?
+                `Pass minted successfully! TX: ${result.txHash}` :
+                'Pass minted successfully! (Simulation)';
+            
+            alert(successText);
+        } else {
+            alert('Minting failed: ' + result.error);
+            mintPassBtn.disabled = false;
+        }
+    });
+    
+    // Enhanced badge claiming with real blockchain
+    claimBadgeBtn.addEventListener('click', async function() {
+        if (!walletConnected || !hasPass) {
+            alert('Connect wallet and get pass first');
+            return;
+        }
+        
+        if (!analyticsService.isUserAuthorized(currentUserAddress)) {
+            alert('❌ Access Denied: Your wallet is not authorized');
+            return;
+        }
+
+        const status = web3Service.getBlockchainStatus();
+        const actionText = status.usingRealBlockchain ? 
+            'Claiming badge... (Confirm in MetaMask)' : 
+            'Claiming badge... (Simulation)';
+        
+        accessStatus.textContent = actionText;
+        claimBadgeBtn.disabled = true;
+        
+        const result = await web3Service.claimBadge();
+        
+        if (result.success) {
+            hasBadge = true;
+            updateUI();
+            
+            const successText = status.usingRealBlockchain ?
+                `Badge claimed successfully! TX: ${result.txHash}` :
+                'Badge claimed successfully! (Simulation)';
+            
+            alert(successText);
+        } else {
+            alert('Badge claim failed: ' + result.error);
+            claimBadgeBtn.disabled = false;
+        }
+    });
+    
+    // Update UI based on state
+    function updateUI() {
+        if (!walletConnected) {
+            accessStatus.className = 'status locked';
+            accessStatus.textContent = 'AR Content Locked - Connect Wallet';
+            mintPassBtn.disabled = true;
+            claimBadgeBtn.disabled = true;
+            collectionDiv.innerHTML = '<p>Connect your wallet to view your passes and badges</p>';
+            return;
+        }
+        
+        if (hasPass) {
+            accessStatus.className = 'status unlocked';
+            
+            const status = web3Service.getBlockchainStatus();
+            const blockchainText = status.usingRealBlockchain ? 'Real Blockchain' : 'Simulation';
+            accessStatus.textContent = `AR Content Unlocked - ${blockchainText}`;
+            
+            mintPassBtn.disabled = true;
+            claimBadgeBtn.disabled = false;
+            
+            // Update AR placeholder
+            document.querySelector('.ar-placeholder').innerHTML = `
+                <div style="text-align: center;">
+                    <h3>AR Experience Active</h3>
+                    <p>Point your camera at the AR marker to view content</p>
+                    <div style="margin-top: 20px; font-size: 3rem;">✨</div>
+                    <p style="font-size: 0.9rem; color: #fdbb2d; margin-top: 10px;">
+                        User: ${currentUserAddress.substring(0, 6)}...${currentUserAddress.substring(38)}
+                    </p>
+                    <p style="font-size: 0.8rem; color: #ffcc44;">
+                        Mode: ${blockchainText}
+                    </p>
+                </div>
+            `;
+        } else {
+            accessStatus.className = 'status locked';
+            accessStatus.textContent = 'Access Denied - You need a pass';
+            mintPassBtn.disabled = false;
+            claimBadgeBtn.disabled = true;
+        }
+        
+        // Update collection
+        let collectionHTML = '';
+        if (hasPass) {
+            collectionHTML += '<div class="badge">Access Pass</div>';
+        }
+        if (hasBadge) {
+            collectionHTML += '<div class="badge">Attendance Badge</div>';
+        }
+        if (!hasPass && !hasBadge) {
+            collectionHTML = '<p>No items in your collection yet</p>';
+        }
+        collectionDiv.innerHTML = collectionHTML;
+        
+        // Update live stats
+        analyticsService.updateLiveStats();
+    }
+    
+    // Initialize UI
+    updateUI();
+});
+// Global Admin Functions
+function addUserByAddress() {
+    const addressInput = document.getElementById('userAddressInput');
+    const userAddress = addressInput.value.trim();
+    
+    if (adminService.addUserToAccessList(userAddress)) {
+        alert('✅ User added to access list!');
+        addressInput.value = ''; // Clear input
+    } else {
+        alert('❌ User already in access list or invalid address');
+    }
+}
+
+// Update Access Control Functions
+function addCurrentUserToAccessList() {
+    if (!analyticsService.currentUser) {
+        alert('Please connect your wallet first');
+        return;
+    }
+    
+    if (adminService.addUserToAccessList(analyticsService.currentUser)) {
+        alert('✅ Current user added to access list!');
+        adminService.updateAccessListDisplay(); // Update both displays
+    } else {
+        alert('❌ User is already in the access list');
+    }
+}
+
+function removeUser(userAddress) {
+    adminService.removeUserFromAccessList(userAddress);
+}
+
+function clearAccessList() {
+    if (confirm('Are you sure you want to clear the access list?')) {
+        adminService.clearAccessList();
+        alert('Access list cleared!');
+    }
+}
+
+function exportAccessList() {
+    adminService.exportAccessList();
+}
+
+function addDemoUsers() {
+    adminService.addDemoUsers();
+}
+
+function togglePublicAccess() {
+    if (adminService.isPublicAccessEnabled()) {
+        adminService.disablePublicAccess();
+    } else {
+        adminService.enablePublicAccess();
+    }
+}
+
+function showAdminAnalytics() {
+    showAnalytics(); // Reuse existing analytics modal
+}
+
+function resetSystem() {
+    adminService.resetSystem();
+}
+
+// Update wallet connection to show admin panel for admin users
+function checkAndShowAdminPanel(userAddress) {
+    if (adminService.isAdmin(userAddress)) {
+        adminService.showAdminPanel();
+        adminService.updatePublicAccessButton();
+        adminService.updateAccessListDisplay();
+        
+        analyticsService.trackEvent('admin_login', {
+            admin: userAddress
+        });
+        
+        console.log("👑 Admin panel activated");
+    } else {
+        adminService.hideAdminPanel();
+    }
+}
+// Debug function - call this in browser console
+function debugAdmin() {
+    console.log("Current User:", analyticsService.currentUser);
+    console.log("Is Admin:", adminService.isAdmin(analyticsService.currentUser));
+    console.log("Admin Wallets:", ["0x35ae321CaEa5977d96344C877dEf5d003C7A6CF5"]);
+    console.log("Wallet Connected:", walletConnected);
+}
+// Your existing QR timer code
+        class QRTimer {
+            constructor() {
+                this.visibilityDuration = 10000;
+                this.cooldownDuration = 120000;
+                this.timerInterval = null;
+                this.isVisible = true;
+                this.initializeTimer();
+            }
+            
+            initializeTimer() {
+                const lastHideTime = localStorage.getItem('qrLastHideTime');
+                if (lastHideTime) {
+                    const timeSinceHide = Date.now() - parseInt(lastHideTime);
+                    if (timeSinceHide < this.cooldownDuration) {
+                        const remainingCooldown = this.cooldownDuration - timeSinceHide;
+                        this.startCooldown(remainingCooldown);
+                        return;
+                    }
+                }
+                this.startVisibilityTimer();
+            }
+            
+            startVisibilityTimer() {
+                this.showQRCode();
+                setTimeout(() => {
+                    this.hideQRCode();
+                    this.startCooldown(this.cooldownDuration);
+                }, this.visibilityDuration);
+            }
+            
+            startCooldown(duration) {
+                this.isVisible = false;
+                localStorage.setItem('qrLastHideTime', Date.now().toString());
+                this.showTimerMessage();
+                this.startCountdownTimer(duration);
+                setTimeout(() => {
+                    document.getElementById('manualRefresh').style.display = 'inline-block';
+                }, 1800000);
+            }
+            
+            startCountdownTimer(duration) {
+                const countdownElement = document.getElementById('countdown');
+                const endTime = Date.now() + duration;
+                
+                this.timerInterval = setInterval(() => {
+                    const now = Date.now();
+                    const remaining = endTime - now;
+                    
+                    if (remaining <= 0) {
+                        clearInterval(this.timerInterval);
+                        this.startVisibilityTimer();
+                        return;
+                    }
+                    
+                    const hours = Math.floor(remaining / (1000 * 60 * 60));
+                    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+                    
+                    countdownElement.textContent = 
+                        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }, 1000);
+            }
+            
+            showQRCode() {
+                const qrElement = document.getElementById('qrCodeElement');
+                const timerMessage = document.getElementById('qrTimerMessage');
+                const refreshButton = document.getElementById('manualRefresh');
+                
+                qrElement.classList.remove('hidden');
+                timerMessage.style.display = 'none';
+                refreshButton.style.display = 'none';
+                this.isVisible = true;
+                
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                }
+            }
+            
+            hideQRCode() {
+                const qrElement = document.getElementById('qrCodeElement');
+                qrElement.classList.add('hidden');
+                this.isVisible = false;
+            }
+            
+            showTimerMessage() {
+                const timerMessage = document.getElementById('qrTimerMessage');
+                timerMessage.style.display = 'block';
+            }
+            
+            manualRefresh() {
+                localStorage.removeItem('qrLastHideTime');
+                this.startVisibilityTimer();
+            }
+        }
+
+        // Initialize QR timer
+        document.addEventListener('DOMContentLoaded', function() {
+            const qrTimer = new QRTimer();
+            document.getElementById('manualRefresh').addEventListener('click', function() {
+                qrTimer.manualRefresh();
+            });
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('analyticsModal');
+            if (event.target === modal) {
+                closeAnalytics();
+            }
+        });
+    </script>
+</body>
+</html>
