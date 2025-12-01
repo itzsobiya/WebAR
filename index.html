@@ -6,6 +6,9 @@
     <title>WebAR Gated Access</title>
     <!-- Fixed Ethers.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <!-- A-Frame and AR.js for marker scanning -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
         * {
             margin: 0;
@@ -235,8 +238,7 @@
         }
 
         .hidden {
-            opacity: 0;
-            pointer-events: none;
+            display: none !important;
         }
 
         #countdown {
@@ -244,6 +246,72 @@
             font-size: 1.2rem;
             color: #fdbb2d;
             font-weight: bold;
+        }
+
+        /* AR Scanner Styles */
+        .ar-scene-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .ar-scene-container a-scene {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .ar-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        .ar-instructions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        .ar-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            z-index: 1001;
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        .marker-info {
+            background: rgba(253, 187, 45, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .marker-image {
+            width: 150px;
+            height: 150px;
+            background: white;
+            margin: 0 auto 15px;
+            padding: 10px;
+            border-radius: 5px;
         }
 
         /* Analytics Modal Styles */
@@ -302,6 +370,14 @@
             padding: 5px 0;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
+
+        /* New AR Controls */
+        .ar-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -317,36 +393,41 @@
                     <h2 class="card-title">How It Works</h2>
                     <div class="step">
                         <div class="step-number">1</div>
-                        <div class="step-text">Scan the QR code to open the WebAR page</div>
-                    </div>
-                    <div class="step">
-                        <div class="step-number">2</div>
                         <div class="step-text">Connect your wallet using Web3Modal</div>
                     </div>
                     <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-text">Mint a pass (free on testnet)</div>
+                    </div>
+                    <div class="step">
                         <div class="step-number">3</div>
-                        <div class="step-text">If you don't have a pass, mint one (free on testnet)</div>
+                        <div class="step-text">Claim your AR badge</div>
                     </div>
                     <div class="step">
                         <div class="step-number">4</div>
-                        <div class="step-text">Access the AR experience and claim your badge</div>
+                        <div class="step-text">Scan Hiro marker with camera to view AR</div>
                     </div>
-                    <div class="qr-container">
-                        <div id="qrTimerMessage" class="timer-message" style="display: none;">
-                            <p>🕒 QR Code will reappear in: <span id="countdown">01:00:00</span></p>
-                        </div>
-    
-                         <div id="qrCodeElement" class="qr-code">
-                            <!-- Simple QR placeholder - replace with your image -->
-                            <div style="width: 150px; height: 150px; background: #000; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">
-                                QR CODE
+                    
+                    <!-- Marker Information -->
+                    <div class="marker-info">
+                        <h4 style="color: #fdbb2d; margin-bottom: 10px;">🎯 Hiro Marker</h4>
+                        <p>Use this marker for AR scanning:</p>
+                        <div class="marker-image">
+                            <!-- Simple Hiro marker representation -->
+                            <div style="width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                HIRO MARKER
                             </div>
-                            <p>Scan to open WebAR page</p>
                         </div>
-                   
-                         <button class="button secondary" id="manualRefresh" style="display: none;">
-                          Show QR Code Now
-                        </button>
+                        <p><strong>Download:</strong> 
+                            <a href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png" 
+                               target="_blank" 
+                               style="color: #4CC3D9; font-weight: bold; text-decoration: none;">
+                               📄 Click Here
+                            </a>
+                        </p>
+                        <p style="font-size: 0.9rem; margin-top: 10px; color: #ccc;">
+                            Display on another screen or print it
+                        </p>
                     </div>
                 </div>
                 
@@ -357,8 +438,9 @@
                     </div>
                     <div style="text-align: center;">
                         <button class="button" id="connectWallet">Connect Wallet</button>
-                        <button class="button secondary" id="mintPass">Mint Pass</button>
-                        <button class="button secondary" id="claimBadge">Claim Badge</button>
+                        <button class="button secondary" id="mintPass" disabled>Mint Pass</button>
+                        <button class="button secondary" id="claimBadge" disabled>Claim Badge</button>
+                        <button class="button" id="startAR" disabled style="background: #4CC3D9;">Start AR Scanner</button>
                     </div>
 
                     <!-- Access Control Section -->
@@ -406,12 +488,44 @@
             <div class="flex-item">
                 <div class="card">
                     <h2 class="card-title">AR Experience</h2>
-                    <div class="ar-container">
+                    <div class="ar-container" id="arContainer">
                         <div class="ar-placeholder" id="arPlaceholder">
-                            AR content will appear here after access is granted
+                            <div style="text-align: center;">
+                                <h3>🔒 AR Scanner</h3>
+                                <p>Complete these steps to unlock:</p>
+                                <div style="margin: 15px 0;">
+                                    <p style="color: #b21f1f;">✓ Connect Wallet</p>
+                                    <p style="color: #b21f1f;">✓ Mint Pass</p>
+                                    <p style="color: #b21f1f;">✓ Claim Badge</p>
+                                </div>
+                                <p style="color: #fdbb2d;">Then click "Start AR Scanner"</p>
+                            </div>
+                        </div>
+                        
+                        <!-- AR Scene will be inserted here -->
+                        <div id="arSceneWrapper" class="hidden">
+                            <div class="ar-header">
+                                <h3>🎓 SECAB Campus AR Tour</h3>
+                                <p id="arStatus">Camera permission needed...</p>
+                            </div>
+                            <div class="ar-loading" id="arLoading">
+                                <h3>📱 Loading AR Experience...</h3>
+                                <p>Please allow camera access when prompted</p>
+                                <div style="margin-top: 15px;">
+                                    <div style="width: 30px; height: 30px; border: 3px solid #fdbb2d; border-top: 3px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                                </div>
+                            </div>
+                            <div class="ar-instructions" id="arInstructions">
+                                <h4>🎯 How to Use:</h4>
+                                <p style="margin: 5px 0; font-size: 14px;">1. Point camera at Hiro marker</p>
+                                <p style="margin: 5px 0; font-size: 14px;">2. Hold steady for better tracking</p>
+                                <div class="ar-controls">
+                                    <button class="button" id="stopAR" style="padding: 8px 15px; background: #b21f1f;">Stop AR</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <p class="info-text">Point your camera at the AR marker to see the special content</p>
+                    <p class="info-text">When unlocked, point your camera at the Hiro marker to see SECAB Campus AR</p>
                 </div>
                 
                 <div class="card">
@@ -521,8 +635,8 @@
         </div>
         
         <footer>
-            <p>WebAR Gated Access Demo | Blockchain-powered Augmented Reality</p>
-            <p>Uses Ethereum testnet for free transactions</p>
+            <p>WebAR Gated Access | Blockchain-powered Augmented Reality</p>
+            <p>Uses Ethereum testnet for free transactions | Scan Hiro marker for AR content</p>
         </footer>
     </div>
 
@@ -581,7 +695,7 @@
     <button class="button admin-btn" id="adminAnalyticsBtn">📊 Admin Analytics</button>
 
     <script>
-        // SIMPLIFIED WORKING VERSION - FIXES ALL ERRORS
+        // SIMPLIFIED WORKING VERSION - WITH AR INTEGRATION
         
         // Global state
         let walletConnected = false;
@@ -589,6 +703,176 @@
         let hasBadge = false;
         let currentUserAddress = null;
         let usingRealBlockchain = false;
+        let arActive = false;
+
+        // AR Scene Management
+        class ARManager {
+            constructor() {
+                this.scene = null;
+                this.markerDetected = false;
+                this.cameraActive = false;
+            }
+
+            createARScene() {
+                const container = document.getElementById('arContainer');
+                const placeholder = document.getElementById('arPlaceholder');
+                const wrapper = document.getElementById('arSceneWrapper');
+                
+                // Show AR wrapper
+                placeholder.classList.add('hidden');
+                wrapper.classList.remove('hidden');
+                
+                // Hide loading after a moment
+                const loading = document.getElementById('arLoading');
+                setTimeout(() => {
+                    if (loading) loading.style.display = 'none';
+                }, 1500);
+                
+                // Create AR scene HTML
+                const sceneHTML = `
+                    <a-scene 
+                        embedded 
+                        arjs="sourceType: webcam; debugUIEnabled: false;"
+                        vr-mode-ui="enabled: false"
+                        renderer="antialias: true;"
+                        style="width: 100%; height: 100%;"
+                    >
+                        <!-- Hiro Marker -->
+                        <a-marker preset="hiro" id="hiro-marker">
+                            <!-- Rotating 3D Cube -->
+                            <a-box 
+                                position="0 0.5 0" 
+                                color="#4CC3D9" 
+                                depth="1" 
+                                height="1" 
+                                width="1"
+                                animation="property: rotation; to: 0 360 0; loop: true; dur: 8000"
+                            ></a-box>
+                            
+                            <!-- SECAB Text -->
+                            <a-text 
+                                value="SECAB" 
+                                position="0 1.8 0" 
+                                align="center" 
+                                color="#FFF"
+                                scale="2 2 2"
+                            ></a-text>
+                            
+                            <!-- CAMPUS Text -->
+                            <a-text 
+                                value="CAMPUS" 
+                                position="0 1.4 0" 
+                                align="center" 
+                                color="#fdbb2d"
+                                scale="1.5 1.5 1.5"
+                            ></a-text>
+                            
+                            <!-- Celebration effect if badge claimed -->
+                            ${hasBadge ? `
+                            <a-sphere 
+                                position="1 1 0" 
+                                radius="0.3" 
+                                color="#FFD700"
+                                animation="property: position; to: 1 1.5 0; dir: alternate; loop: true; dur: 1000"
+                            ></a-sphere>
+                            <a-sphere 
+                                position="-1 1 0" 
+                                radius="0.3" 
+                                color="#FF4500"
+                                animation="property: position; to: -1 1.5 0; dir: alternate; loop: true; dur: 1000"
+                            ></a-sphere>
+                            ` : ''}
+                        </a-marker>
+                        
+                        <a-entity camera></a-entity>
+                    </a-scene>
+                `;
+                
+                // Add scene to wrapper
+                wrapper.insertAdjacentHTML('beforeend', sceneHTML);
+                
+                // Get the scene element
+                this.scene = wrapper.querySelector('a-scene');
+                
+                // Set up event listeners
+                if (this.scene) {
+                    this.scene.addEventListener('loaded', () => {
+                        console.log('✅ AR Scene loaded');
+                        document.getElementById('arStatus').textContent = 'Ready - Point camera at Hiro marker';
+                        analytics.trackEvent('ar_scene_loaded');
+                    });
+                    
+                    // Marker detection events
+                    setTimeout(() => {
+                        const marker = document.getElementById('hiro-marker');
+                        if (marker) {
+                            marker.addEventListener('markerFound', () => {
+                                this.markerDetected = true;
+                                document.getElementById('arStatus').innerHTML = '✅ <span style="color:#4CC3D9;">Marker Found! AR Active</span>';
+                                document.querySelector('.ar-header h3').innerHTML = '🎓 SECAB Campus Visible!';
+                                analytics.trackEvent('marker_detected');
+                            });
+                            
+                            marker.addEventListener('markerLost', () => {
+                                this.markerDetected = false;
+                                document.getElementById('arStatus').textContent = 'Searching for Hiro marker...';
+                                document.querySelector('.ar-header h3').innerHTML = '🎓 SECAB Campus AR Tour';
+                            });
+                        }
+                    }, 1000);
+                }
+                
+                arActive = true;
+                return true;
+            }
+
+            stopARScene() {
+                const placeholder = document.getElementById('arPlaceholder');
+                const wrapper = document.getElementById('arSceneWrapper');
+                const scene = wrapper.querySelector('a-scene');
+                
+                if (scene) {
+                    scene.parentNode.removeChild(scene);
+                }
+                
+                // Reset wrapper
+                wrapper.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                
+                // Reset UI
+                document.getElementById('arLoading').style.display = 'block';
+                
+                this.scene = null;
+                this.markerDetected = false;
+                arActive = false;
+                
+                analytics.trackEvent('ar_scene_stopped');
+                console.log('⏹️ AR Scene stopped');
+            }
+
+            async checkCameraPermission() {
+                return new Promise((resolve) => {
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        navigator.mediaDevices.getUserMedia({ video: true })
+                            .then(() => {
+                                console.log("✅ Camera access granted");
+                                this.cameraActive = true;
+                                resolve(true);
+                            })
+                            .catch((error) => {
+                                console.log("⚠️ Camera not accessible:", error.name);
+                                alert('Camera access is required for AR scanning. Please enable camera permissions.');
+                                resolve(false);
+                            });
+                    } else {
+                        alert('Camera API not supported in this browser.');
+                        resolve(false);
+                    }
+                });
+            }
+        }
+
+        const arManager = new ARManager();
 
         // Simple analytics
         class SimpleAnalytics {
@@ -722,6 +1006,7 @@
             const accessStatus = document.getElementById('accessStatus');
             const mintBtn = document.getElementById('mintPass');
             const claimBtn = document.getElementById('claimBadge');
+            const startARBtn = document.getElementById('startAR');
             const collection = document.getElementById('collection');
             const arPlaceholder = document.getElementById('arPlaceholder');
 
@@ -730,7 +1015,22 @@
                 accessStatus.textContent = 'AR Content Locked - Connect Wallet';
                 if (mintBtn) mintBtn.disabled = true;
                 if (claimBtn) claimBtn.disabled = true;
+                if (startARBtn) startARBtn.disabled = true;
                 if (collection) collection.innerHTML = '<p>Connect your wallet to view your passes and badges</p>';
+                if (arPlaceholder) {
+                    arPlaceholder.innerHTML = `
+                        <div style="text-align: center;">
+                            <h3>🔒 AR Scanner</h3>
+                            <p>Complete these steps to unlock:</p>
+                            <div style="margin: 15px 0;">
+                                <p style="color: #b21f1f;">✗ Connect Wallet</p>
+                                <p style="color: #b21f1f;">✗ Mint Pass</p>
+                                <p style="color: #b21f1f;">✗ Claim Badge</p>
+                            </div>
+                            <p style="color: #fdbb2d;">Connect wallet to begin</p>
+                        </div>
+                    `;
+                }
                 return;
             }
 
@@ -742,22 +1042,32 @@
                 if (mintBtn) mintBtn.disabled = true;
                 if (claimBtn) claimBtn.disabled = false;
                 
-                if (arPlaceholder) {
+                if (arPlaceholder && !arActive) {
                     arPlaceholder.innerHTML = `
                         <div style="text-align: center;">
-                            <h3>🚀 AR Experience Active</h3>
-                            <p>Point your camera to view augmented content</p>
-                            <div style="font-size: 4rem; margin: 20px 0;">✨</div>
-                            <p style="color: #fdbb2d;">User: ${currentUserAddress?.substring(0, 10)}...</p>
-                            <p style="color: #ffcc44;">Mode: ${mode}</p>
+                            <h3>🔓 AR Scanner Ready</h3>
+                            <p>Complete these steps:</p>
+                            <div style="margin: 15px 0;">
+                                <p style="color: #00ff00;">✓ Connect Wallet</p>
+                                <p style="color: #00ff00;">✓ Mint Pass</p>
+                                <p style="color: ${hasBadge ? '#00ff00' : '#b21f1f'};">${hasBadge ? '✓' : '✗'} Claim Badge</p>
+                            </div>
+                            ${hasBadge ? 
+                                '<p style="color: #fdbb2d; margin-top: 10px;">🎉 Click "Start AR Scanner" to begin!</p>' : 
+                                '<p style="color: #fdbb2d;">Claim your badge to unlock AR</p>'
+                            }
                         </div>
                     `;
                 }
+                
+                if (startARBtn) startARBtn.disabled = !hasBadge;
+                
             } else {
                 accessStatus.className = 'status locked';
                 accessStatus.textContent = 'Connect Wallet & Mint Pass';
                 if (mintBtn) mintBtn.disabled = false;
                 if (claimBtn) claimBtn.disabled = true;
+                if (startARBtn) startARBtn.disabled = true;
             }
 
             // Update collection
@@ -864,13 +1174,34 @@
                 analytics.trackEvent('ar_accessed');
                 updateUI();
                 
-                document.getElementById('accessStatus').textContent = 'Badge Claimed!';
-                alert('🏆 Badge claimed successfully!');
+                document.getElementById('accessStatus').textContent = 'Badge Claimed! AR Scanner Ready.';
+                alert('🏆 Badge claimed successfully! You can now scan the Hiro marker.');
                 
             } catch (error) {
                 alert('Badge claim failed: ' + error.message);
                 document.getElementById('claimBadge').disabled = false;
             }
+        }
+
+        // Start AR Scanner
+        async function startARScanner() {
+            if (!hasBadge) {
+                alert('Please claim your badge first to unlock AR scanning.');
+                return;
+            }
+            
+            const hasCamera = await arManager.checkCameraPermission();
+            if (hasCamera) {
+                arManager.createARScene();
+                updateUI();
+                analytics.trackEvent('ar_scanner_started');
+            }
+        }
+
+        // Stop AR Scanner
+        function stopARScanner() {
+            arManager.stopARScene();
+            updateUI();
         }
 
         // Emergency functions
@@ -879,6 +1210,7 @@
             
             walletConnected = true;
             hasPass = true;
+            hasBadge = true;
             currentUserAddress = currentUserAddress || '0xAdminUser';
             
             admin.showAdminPanel();
@@ -908,6 +1240,8 @@
                 • Is Admin: ${admin.isAdmin(currentUserAddress)}<br>
                 • Wallet Connected: ${walletConnected}<br>
                 • Has Pass: ${hasPass}<br>
+                • Has Badge: ${hasBadge}<br>
+                • AR Active: ${arActive}<br>
                 • Using Real Blockchain: ${usingRealBlockchain}<br>
                 • In Access List: ${admin.accessList.includes((currentUserAddress || '').toLowerCase())}
             `;
@@ -936,6 +1270,8 @@
             document.getElementById('connectWallet').addEventListener('click', connectWallet);
             document.getElementById('mintPass').addEventListener('click', mintPass);
             document.getElementById('claimBadge').addEventListener('click', claimBadge);
+            document.getElementById('startAR').addEventListener('click', startARScanner);
+            document.getElementById('stopAR').addEventListener('click', stopARScanner);
             
             // Admin buttons
             document.getElementById('forceAdminUnlock').addEventListener('click', forceAdminUnlock);
@@ -1000,16 +1336,27 @@
             document.getElementById('closeAnalytics').addEventListener('click', closeAnalytics);
             document.getElementById('showAdminAnalytics').addEventListener('click', showAnalytics);
 
+            // Add CSS animation for spinner
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+
             // Initialize
             admin.updateAccessListDisplay();
             analytics.updateLiveStats();
             updateUI();
 
-            console.log("✅ WebAR System Initialized Successfully!");
+            console.log("✅ WebAR System with Hiro Marker Initialized Successfully!");
         });
 
         // Make admin global for remove buttons
         window.admin = admin;
+        window.arManager = arManager;
     </script>
 </body>
 </html>
